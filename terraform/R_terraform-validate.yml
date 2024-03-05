@@ -1,0 +1,29 @@
+#
+# This workflow can be called to perform a 'terraform valide'
+#
+###################################################
+---
+name: Terraform - validate check
+
+description: |+
+  This workflow will run terraform validate.
+author: EnergyPool devops@energy-pool.eu
+
+on:
+  workflow_call:
+
+jobs:
+  terraform:
+    runs-on: [gha-private-runners]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '14' # version 14 is required to bypass node issue
+      # runcommand terraform init
+      - name: Terraform init
+        run: terraform init
+      # runcommand terraform validate
+      - name: Terraform validate
+        run: terraform validate
