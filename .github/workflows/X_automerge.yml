@@ -30,6 +30,13 @@ jobs:
       - name: Checkout Repository
         id: checkout_branch
         uses: actions/checkout@v3
+
+
+        ####
+        ####ICI trigger pull request du bot et auto review/merge
+      - uses: omio-labs/pr-reviewer-bot@v1
+        with:
+          GITHUB_TOKEN: ${{ steps.create_token.outputs.token }}
       - name: Pull Request Automerge
         run: |
           gh pr merge --squash --auto 10
