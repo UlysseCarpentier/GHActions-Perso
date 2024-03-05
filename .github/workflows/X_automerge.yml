@@ -1,0 +1,35 @@
+name: Automerge
+# Git App Rights (Repo):
+# Contents write
+# Pull requests write
+# Workflows write
+
+# OPTIONAL Create ruleset protection repo-sync/comments for bot-repo Pull request without review
+on:
+  workflow_dispatch:
+
+jobs:
+  sync_files:
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ job.status }}
+    steps:
+      - id: create_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.APP_PEM }}
+          permissions: >-
+            {
+              "contents": "write",
+              "metadata": "read",
+              "pull_requests": "write",
+              "workflows": "write"
+            }
+      - run: "echo 'The created token is masked: ${{ steps.create_token.outputs.token }}'"
+
+      - name: Pull Request Automerge
+        run: |
+          gh pr merge --squash --auto 10
+        env:
+          GH_TOKEN: ${{ steps.create_token.outputs.token }}
