@@ -2,9 +2,7 @@ name: Commit Message Check
 run-name: ${{ github.actor }} Checking commit message on push
 
 on:
-  push:
-    branches:
-      - '*'
+  workflow_dispatch:
 
 jobs:
   Check-Commit-Message:
