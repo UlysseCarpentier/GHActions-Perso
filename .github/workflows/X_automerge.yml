@@ -27,7 +27,9 @@ jobs:
               "workflows": "write"
             }
       - run: "echo 'The created token is masked: ${{ steps.create_token.outputs.token }}'"
-
+      - name: Checkout Repository
+        id: checkout_branch
+        uses: actions/checkout@v3
       - name: Pull Request Automerge
         run: |
           gh pr merge --squash --auto 10
