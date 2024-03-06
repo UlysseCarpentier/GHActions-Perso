@@ -1,0 +1,100 @@
+name: Reusable Playwright Tests
+#name: Reusable Playwright Tests
+#description: |+
+#  Run Playwright tests
+#author: EnergyPool devops@energy-pool.eu
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        type: string
+        default: 20
+        description: The node version to use. 20 by default
+      project_path:
+        type: string
+        description: The path to the project
+      frontend_project_path:
+        type: string
+        description: The path to the project"s frontend
+      e2e_user_login:
+        type: string
+        description: The login to use for the tests
+      e2e_base_url:
+        type: string
+        description: The base URL for the tests
+      sha:
+        required: false
+        type: string
+        description: The commit SHA
+      head_ref:
+        required: false
+        type: string
+        description: The head reference
+      runner_version:
+        type: string
+        required: false
+        default: java-17
+        description: Version of the runner to take
+    secrets:
+      ORG_GRADLE_PROJECT_NEXUSREPOSITORYPASSWORD:
+        required: false
+        description: "Nexus dev repository password. Comes from the secrets of the organization."
+      e2e_user_password:
+        required: true
+
+env:
+  ORG_GRADLE_PROJECT_nexusRepositoryUsername: ${{ vars.ORG_GRADLE_PROJECT_NEXUSREPOSITORYUSERNAME }}
+  ORG_GRADLE_PROJECT_nexusRepositoryUrlPublishRoot: ${{ vars.ORG_GRADLE_PROJECT_NEXUSREPOSITORYURLPUBLISHROOT }}
+  ORG_GRADLE_PROJECT_nexusRepositoryUrlPublic: ${{ vars.ORG_GRADLE_PROJECT_NEXUSREPOSITORYURLPUBLIC }}
+  ORG_GRADLE_PROJECT_nexusRepositoryUrlSnapshot: ${{ vars.ORG_GRADLE_PROJECT_NEXUSREPOSITORYURLSNAPSHOT }}
+  ORG_GRADLE_PROJECT_nexusRepositoryPassword: ${{ secrets.ORG_GRADLE_PROJECT_NEXUSREPOSITORYPASSWORD }}
+  ORG_GRADLE_PROJECT_mv_user: ${{ vars.MV_USER }}
+  ORG_GRADLE_PROJECT_mv_pwd: ${{ secrets.MV_PWD }}
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: gha-private-runners-${{ inputs.runner_version }}
+    steps:
+      - name: Update check status
+        if: ${{ inputs.sha }}
+        uses: myrotvorets/set-commit-status-action@master
+        with:
+          sha: ${{ inputs.sha }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.head_ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v3
+      - name: Generate file .npmrc
+        working-directory: ${{ inputs.project_path }}
+        run: ./gradlew generateNpmrc
+      - name: Install dependencies
+        working-directory: ${{ inputs.project_path }}
+        run:  ./gradlew npmInstall
+      - name: Install Playwright Browsers
+        working-directory: ${{ inputs.frontend_project_path }}
+        run: npx playwright install --with-deps
+      - name: Run Playwright tests
+        working-directory: ${{ inputs.frontend_project_path }}
+        run: npx playwright test
+        env:
+          E2E_BASE_URL: ${{ inputs.e2e_base_url }}
+          E2E_USER_LOGIN: ${{ inputs.e2e_user_login }}
+          E2E_USER_PASSWORD: ${{ secrets.e2e_user_password }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: ${{ inputs.frontend_project_path }}/playwright-report/
+      - name: Update check status
+        if: ${{ always() && inputs.sha }}
+        uses: myrotvorets/set-commit-status-action@master
+        with:
+          sha: ${{ inputs.sha }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          status: ${{ job.status }}
