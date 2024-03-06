@@ -38,7 +38,6 @@ jobs:
         ####
         ####ICI trigger pull request du bot et auto review/merge
       - name: Approve pull request
-        if: github.actor == 'testsyncgha[bot]'
         uses: andrewmusgrave/automatic-pull-request-review@0.0.5
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
