@@ -51,3 +51,4 @@ Refs:
 https://www.ravsam.in/blog/send-slack-notification-when-github-actions-fails/| R_playwright-tests | <br>Run Playwright tests<br> | [R_playwright-tests](https://github.com/UlysseCarpentier/GHActions-Git-Brother/blob/main/playwright/R_playwright-tests.yml)  |
 | R_terraform-docs | <br>This workflow will be triggered on push to main branch and will update the README.adoc file with the latest terraform docs.<br> | [R_terraform-docs](https://github.com/UlysseCarpentier/GHActions-Git-Brother/blob/main/terraform/R_terraform-docs.yml)  |
 | R_terraform-validate | <br>This workflow will run terraform validate.<br> | [R_terraform-validate](https://github.com/UlysseCarpentier/GHActions-Git-Brother/blob/main/terraform/R_terraform-validate.yml)  |
+| R_chart-release | <br>Release a Helm chart to Amazon ECR<br> | [R_chart-release](https://github.com/UlysseCarpentier/GHActions-Git-Brother/blob/main/chart/R_chart-release.yml)  |
