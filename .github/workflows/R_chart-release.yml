@@ -1,0 +1,53 @@
+name: Chart Release
+#name: Chart Release
+#description: |+
+#  Release a Helm chart to Amazon ECR
+#author: EnergyPool devops@energy-pool.eu
+on:
+  workflow_call:
+    inputs:
+      chart-name:
+        required: true
+        type: string
+        description: The name of the chart to release
+      chart-path:
+        required: true
+        type: string
+        description: The path to the chart to release
+
+jobs:
+  chart:
+    name: Charts ${{ inputs.chart-name }}
+    runs-on: [gha-private-runners]
+    if: startsWith(github.event.release.tag_name, format('chart/{0}/', inputs.chart-name))
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v3
+        with:
+          version: latest
+          token: ${{ secrets.GITHUB_TOKEN }} # only needed if version is 'latest'
+      - run: |
+          echo "version=$(echo -n '${{ github.event.release.tag_name }}' | sed 's/chart\/${{ inputs.chart-name }}\///g')" >> "$GITHUB_OUTPUT"
+        id: vars
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: eu-west-1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          mask-password: 'true'
+          registries: "742866896106"
+      - name: Package and push helm chart to Amazon ECR
+        id: build
+        run: |
+          helm package ${{ inputs.chart-path }} --version ${{ steps.vars.outputs.version }}
+          helm push ${{ inputs.chart-name }}-${{ steps.vars.outputs.version }}.tgz oci://742866896106.dkr.ecr.eu-west-1.amazonaws.com/energypool.eu/chart
+      - name: Update release
+        if: ${{ steps.build.conclusion == 'success' }}
+        uses: tubone24/update_release@v1.0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          body: 742866896106.dkr.ecr.eu-west-1.amazonaws.com/energypool.eu/chart/${{ inputs.chart-name }}-${{ steps.vars.outputs.version }}
