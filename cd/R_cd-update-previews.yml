@@ -2,6 +2,7 @@ name: CD Update Previews
 description: |+
   Update previews config file for a given app to deploy it by k8s.
   Should be triggered on pull request comment
+  izizieizeizeezezez
 author: EnergyPool devops@energy-pool.eu
 
 on:
