@@ -5,13 +5,13 @@ name: Automerge
 # Workflows write
 
 # OPTIONAL Create ruleset protection repo-sync/comments for bot-repo Pull request without review
-on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    paths:
-      - '**/R_*.yml'
-      - '!.github/**'
-      - '!**/*.md'
+#on:
+#  pull_request:
+#    types: [opened, synchronize, reopened]
+#    paths:
+#      - '**/R_*.yml'
+#      - '!.github/**'
+#      - '!**/*.md'
 jobs:
   sync_files:
     runs-on: ubuntu-latest

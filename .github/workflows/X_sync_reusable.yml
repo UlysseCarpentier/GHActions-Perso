@@ -20,7 +20,7 @@ jobs:
     steps:
       - name: Checkout Repository
         id: checkout_branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.ref }}
       - name: Comment lines
@@ -41,8 +41,7 @@ jobs:
             mv "$newfile" "$last_path"
             echo "moved files from "$newfile" to "$last_path""
           done
-      - uses: EndBug/add-and-commit@v9
-        with:
-          default_author: github_actions
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        if: steps.comment_lines.outcome == 'success'
     
 
