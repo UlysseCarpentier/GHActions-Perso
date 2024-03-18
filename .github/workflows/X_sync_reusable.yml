@@ -18,6 +18,18 @@ jobs:
     outputs:
       status: ${{ job.status }}
     steps:
+      - id: create_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.APP_PEM }}
+          permissions: >-
+            {
+              "contents": "write",
+              "metadata": "read",
+              "pull_requests": "write",
+              "workflows": "write"
+            }
       - name: Checkout Repository
         id: checkout_branch
         uses: actions/checkout@v4
@@ -41,7 +53,19 @@ jobs:
             mv "$newfile" "$last_path"
             echo "moved files from "$newfile" to "$last_path""
           done
-      - uses: stefanzweifel/git-auto-commit-action@v5
-        if: steps.comment_lines.outcome == 'success'
+      - name: Configure git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+
+      - name: Add & Commit changes
+        run: |
+          git add -A
+          git commit -m "Commit message"
+
+      - name: Set remote URL & Push changes
+        run: |
+          git remote set-url origin https://${{ steps.create_token.outputs.token }}@github.com/UlysseCarpentier/GHActions-Perso.git
+          git push origin HEAD:${{ github.head_ref }}
     
 
