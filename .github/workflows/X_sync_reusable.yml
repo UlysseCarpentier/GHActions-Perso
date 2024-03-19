@@ -53,16 +53,17 @@ jobs:
             mv "$newfile" "$last_path"
             echo "moved files from "$newfile" to "$last_path""
           done
-      - name: Commit files
-        run: |
-          git add .
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git commit -a -m "Add changes"
-      - name: Push changes
-        uses: ad-m/github-push-action@master
-        with:
-          github_token: ${{ secrets.github_token }}
-          branch: ${{ github.event.pull_request.head.ref }}
+      - uses: stefanzweifel/git-auto-commit-action@v5
+#      - name: Commit files
+#        run: |
+#          git add .
+#          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+#          git config --local user.name "github-actions[bot]"
+#          git commit -a -m "Add changes"
+#      - name: Push changes
+#        uses: ad-m/github-push-action@master
+#        with:
+#          github_token: ${{ secrets.github_token }}
+#          branch: ${{ github.event.pull_request.head.ref }}
     
 
