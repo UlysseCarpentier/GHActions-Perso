@@ -76,5 +76,5 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           event: COMMENT
-          body: 'Thank you dependabot 🎊'
+          body: 'Synced reusable workflows files ${{ steps.cpr.outputs.pull-request-url }}'
 
