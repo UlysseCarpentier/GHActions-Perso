@@ -7,8 +7,6 @@ name: Sync Reusable Workflows
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    tags-ignore:
-      - 'ci-lock'
     paths:
       - '**/R_*.yml'
       - '!.github/**'
