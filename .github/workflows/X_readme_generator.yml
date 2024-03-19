@@ -1,18 +1,21 @@
 name: Readme Generator
 on:
   workflow_dispatch:
-  push:
+  pull_request:
+    types: [closed]
     branches:
       - main
     paths:
       - '**/R_*.yml'
       - '!.github/**'
       - '!**/*.md'
+
 jobs:
   find_reusable_files:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - id: reusable_files
         run: |
           yaml_files=$(find . -type f -name 'R_*.yml' -not -path './.github/*' -exec sh -c 'echo "$(dirname "$1")/$(basename -s .yml "$1")"' _ {} \;)
@@ -50,7 +53,7 @@ jobs:
               "workflows": "write"
             }
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Action name
         id: name_action
         run: |
@@ -71,7 +74,7 @@ jobs:
             echo "match=false" >> $GITHUB_OUTPUT
             echo "main_update=true" >> $GITHUB_OUTPUT
           fi
-          
+
 
       - name: Run github-action-readme-generator
         id: doc_generator
@@ -92,7 +95,7 @@ jobs:
           result=$(echo "$content" | awk '{printf "%s<br>", $0}')
           mkdir -p outputs
           echo "$result" >> outputs/${{steps.name_action.outputs.filename}}.txt
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         id: upload_artifact
         if: steps.get_desc.outcome == 'success'
         with:
@@ -107,7 +110,7 @@ jobs:
       - name: Create Pull Request
         id: cpr_reusable
         if: steps.remove_files.outcome != 'failed'
-        uses: peter-evans/create-pull-request@v5
+        uses: peter-evans/create-pull-request@v6
         with:
           title: "docs(readme): update ${{steps.name_action.outputs.filename}}.md on ${{ github.ref_name }}"
           commit-message: "docs(readme): updated ${{steps.name_action.outputs.filename}}.md inputs table"
@@ -117,17 +120,28 @@ jobs:
           labels: bot,documentation
           token: ${{ steps.create_token.outputs.token }}
       - name: Pull Request Automerge
+        id: automerge
         if: steps.cpr_reusable.outputs.pull-request-operation == 'created'
         run: |
           gh pr merge --squash --auto ${{ steps.cpr_reusable.outputs.pull-request-number }}
         env:
           GH_TOKEN: ${{ steps.create_token.outputs.token }}
+      - name: Approve pull request
+        if: steps.automerge.outcome == 'success'
+        uses: andrewmusgrave/automatic-pull-request-review@0.0.5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          event: COMMENT
+          body: 'Merged reusable README file: ${{ steps.cpr_reusable.outputs.pull-request-url }} For ${{steps.name_action.outputs.filename}}.yml'
+
 
 
 
   set_desc:
     needs: [ generate_doc ]
     runs-on: ubuntu-latest
+    outputs:
+      status: ${{ job.status }}
     steps:
       - id: create_token
         uses: tibdex/github-app-token@v2
@@ -163,13 +177,12 @@ jobs:
               echo "Warning: $file_name.yml not found!"
             else
               description=$(cat "$txt_file")
-          
+
               #
               #   !!!ATTENTION!!!
-              #   @ULYSSE
               #   CHANGER L'URL VERS LA BONNE VERSION
-              #   
-              echo "| $file_name | $description | [$file_name](https://github.com/UlysseCarpentier/GHActions-Git-Brother/blob/main/$location)  |" >> "$README"
+              #
+              echo "| $file_name | $description | [$file_name](https://github.com/energypool/gha_shared/blob/main/$location)  |" >> "$README"
             fi
           done
       - name: Remove files
@@ -194,10 +207,16 @@ jobs:
         with:
           name: outputs
       - name: Pull Request Automerge
+        id: automerge
         if: steps.cpr_main.outputs.pull-request-operation == 'created'
         run: |
           gh pr merge --squash --auto ${{ steps.cpr_main.outputs.pull-request-number }}
         env:
           GH_TOKEN: ${{ steps.create_token.outputs.token }}
-      
-# Slack Notify if failure
+      - name: Approve pull request
+        if: steps.automerge.outcome == 'success'
+        uses: andrewmusgrave/automatic-pull-request-review@0.0.5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          event: COMMENT
+          body: 'Merged Action list: ${{ steps.cpr_main.outputs.pull-request-url }}'
