@@ -1,0 +1,71 @@
+name: Chart Snapshot
+#name: Chart Snapshot
+#description: |+
+#  Snapshot a Helm chart to Amazon ECR
+#author: EnergyPool devops@energy-pool.eu
+on:
+  workflow_call:
+    inputs:
+      chart-name:
+        required: true
+        type: string
+        description: The name of the chart to snapshot
+      chart-path:
+        required: true
+        type: string
+        description: The path to the chart to snapshot
+
+jobs:
+  chart:
+    name: Charts ${{ inputs.chart-name }}
+    runs-on: [gha-private-runners]
+    if: github.event.issue.pull_request && startsWith(github.event.comment.body, format('/snapshot chart {0}', inputs.chart-name))
+    steps:
+      - uses: xt0rted/pull-request-comment-branch@v2
+        id: comment_branch
+        if: success()
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.comment_branch.outputs.head_ref }}
+      - name: Update comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          reactions: rocket
+      - run: |
+          echo "version=$(echo -n '${{ github.event.comment.body }}' | sed 's/${{ format('\/snapshot chart {0}', inputs.chart-name) }} //g')" >> "$GITHUB_OUTPUT"
+        id: vars
+      - uses: azure/setup-helm@v3
+        with:
+          version: latest
+          token: ${{ secrets.GITHUB_TOKEN }} # only needed if version is 'latest'
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: eu-west-1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        with:
+          mask-password: 'true'
+          registries: "328346359084"
+      - name: Package and push helm chart to Amazon ECR
+        id: build
+        run: |
+          helm package ${{ inputs.chart-path }} --version ${{ steps.vars.outputs.version }}
+          helm push ${{ inputs.chart-name }}-${{ steps.vars.outputs.version }}.tgz oci://328346359084.dkr.ecr.eu-west-1.amazonaws.com/energypool.eu/chart
+      - name: Update comment
+        if: ${{ always() && steps.build.conclusion == 'success' }}
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          body: "328346359084.dkr.ecr.eu-west-1.amazonaws.com/energypool.eu/chart/${{ inputs.chart-name }}:${{ steps.vars.outputs.version }}"
+          reactions: hooray
+      - name: Update comment
+        if: ${{ always() && steps.build.conclusion == 'failure' }}
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          reactions: confused
+
+
