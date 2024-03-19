@@ -1,0 +1,40 @@
+name: CD Clean Previews
+description: |+
+  Clean previews.
+  Only triggered by issue_comment / pull request events.
+author: EnergyPool devops@energy-pool.eu
+
+on:
+  workflow_call:
+    secrets:
+      k8s_previews_deploy_key:
+        description: "SSH key k8s_previews_deploy_key to be ale to checkout k8s-preview repository"
+        required: true
+    inputs:
+      app_name:
+        description: "The name of the app"
+        required: true
+        type: string
+jobs:
+  clean_config:
+    if: github.event.pull_request
+    name: Clean Config
+    runs-on: [gha-private-runners]
+    steps:
+    - run: git config --global user.email "devops@energy-pool.eu" && git config --global user.name "gha-runner"
+    - run: sudo apt-get update && sudo apt-get install openssh-client wget -y
+    - name: Checkout k8s-previews
+      uses: actions/checkout@v4
+      with:
+        repository: energypool/k8s-previews
+        ref: main
+        ssh-key: ${{ secrets.k8s_previews_deploy_key }}
+    - name: Remove config
+      run: |
+        if [ -f ${{ inputs.app_name }}/${{ github.event.number }}.yaml ]; then
+          rm ${{ inputs.app_name }}/${{ github.event.number }}.yaml
+          git add .
+          git commit -m "clean(${{ inputs.app_name }}): config for ${{ github.event.number }}"
+          git push
+        fi
+
