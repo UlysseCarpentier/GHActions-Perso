@@ -70,11 +70,11 @@ jobs:
           gh pr merge --squash --auto ${{ steps.cpr.outputs.pull-request-number }}
         env:
           GH_TOKEN: ${{ steps.create_token.outputs.token }}
-      - name: Approve pull request
-        if: steps.automerge.outcome == 'success'
-        uses: andrewmusgrave/automatic-pull-request-review@0.0.5
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          event: COMMENT
-          body: 'Synced reusable workflows files ${{ steps.cpr.outputs.pull-request-url }}'
+#      - name: Approve pull request
+#        if: steps.automerge.outcome == 'success'
+#        uses: andrewmusgrave/automatic-pull-request-review@0.0.5
+#        with:
+#          repo-token: ${{ secrets.GITHUB_TOKEN }}
+#          event: COMMENT
+#          body: 'Synced reusable workflows files ${{ steps.cpr.outputs.pull-request-url }}'
 

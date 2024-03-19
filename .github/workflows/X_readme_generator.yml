@@ -95,7 +95,7 @@ jobs:
           result=$(echo "$content" | awk '{printf "%s<br>", $0}')
           mkdir -p outputs
           echo "$result" >> outputs/${{steps.name_action.outputs.filename}}.txt
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v3
         id: upload_artifact
         if: steps.get_desc.outcome == 'success'
         with:
