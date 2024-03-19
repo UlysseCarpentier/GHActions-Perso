@@ -1,14 +1,14 @@
 name: Readme Generator
 on:
   workflow_dispatch:
-  pull_request:
-    types: [closed]
-    branches:
-      - main
-    paths:
-      - '**/R_*.yml'
-      - '!.github/**'
-      - '!**/*.md'
+#  pull_request:
+#    types: [closed]
+#    branches:
+#      - main
+#    paths:
+#      - '**/R_*.yml'
+#      - '!.github/**'
+#      - '!**/*.md'
 
 jobs:
   find_reusable_files:

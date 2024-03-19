@@ -78,3 +78,224 @@ jobs:
 #          event: COMMENT
 #          body: 'Synced reusable workflows files ${{ steps.cpr.outputs.pull-request-url }}'
 
+  find_reusable_files:
+    needs: sync_files
+    runs-on: ubuntu-latest
+    steps:
+      - id: create_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.APP_PEM }}
+          permissions: >-
+            {
+              "contents": "write",
+              "metadata": "read",
+              "pull_requests": "write",
+              "workflows": "write"
+            }
+      - name: Checkout Repository
+        id: checkout_branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - id: reusable_files
+        run: |
+          yaml_files=$(find . -type f -name 'R_*.yml' -not -path './.github/*' -exec sh -c 'echo "$(dirname "$1")/$(basename -s .yml "$1")"' _ {} \;)
+          echo $yaml_files
+          yaml_array=$(echo "$yaml_files" | jq -R -s 'split("\n")[:-1] | map(split(" ")) | flatten')
+          quoted_array=$(echo "$yaml_array" | jq -c 'map("\"" + . + "\"")')
+          target_string='{ "target":'
+          end_string=' }'
+          json_array="${target_string} ${yaml_array} ${end_string}"
+          echo 'matrix='$json_array >> $GITHUB_OUTPUT
+    outputs:
+      actions: ${{steps.reusable_files.outputs.matrix}}
+
+
+
+  generate_doc:
+    needs: find_reusable_files
+    runs-on: ubuntu-latest
+    outputs:
+      filename: ${{steps.name_action.outputs.filename}}
+      match: ${{steps.check_file.outputs.match}}
+      main_update: ${{steps.check_file.outputs.main_update}}
+    strategy:
+      matrix:
+        target: ${{fromJSON(needs.find_reusable_files.outputs.actions).target}}
+    steps:
+      - id: create_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.APP_PEM }}
+          permissions: >-
+            {
+              "contents": "write",
+              "metadata": "read",
+              "pull_requests": "write",
+              "workflows": "write"
+            }
+      - name: Checkout Repository
+        id: checkout_branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Action name
+        id: name_action
+        run: |
+          filename=$(basename "${{ matrix.target }}")
+          echo "Filename is: $filename"
+          echo 'filename='$filename >> $GITHUB_OUTPUT
+
+      - name: Check if file exists, if not copy base_README.md
+        id: check_file
+        run: |
+          if [ -e "${{ matrix.target }}".md ]; then
+            echo "File exists!"
+            echo "match=true" >> $GITHUB_OUTPUT
+          else
+            echo "File does not exist."
+            cp "./resources/Base_README.md" "${{matrix.target}}".md
+            echo "copied"
+            echo "match=false" >> $GITHUB_OUTPUT
+            echo "main_update=true" >> $GITHUB_OUTPUT
+          fi
+
+
+      - name: Run github-action-readme-generator
+        id: doc_generator
+        if: steps.check_file.outcome == 'success'
+        uses: bitflight-devops/github-action-readme-generator@v1.4.0
+        with:
+          action: ${{ matrix.target }}.yml
+          readme: ${{ matrix.target }}.md
+      - name: Get Description
+        id: get_desc
+        if: ${{ steps.check_file.outputs.match != 'true' }}
+        run: |
+          start_pattern='<!-- start description -->'
+          end_pattern='<!-- end description -->'
+          start_line=$(grep -n "$start_pattern" "${{matrix.target}}".md | cut -d ":" -f 1)
+          end_line=$(grep -n "$end_pattern" "${{matrix.target}}".md | cut -d ":" -f 1)
+          content=$(sed -n "$((start_line + 1)),$((end_line - 1))p" "${{matrix.target}}".md)
+          result=$(echo "$content" | awk '{printf "%s<br>", $0}')
+          mkdir -p outputs
+          echo "$result" >> outputs/${{steps.name_action.outputs.filename}}.txt
+      - uses: actions/upload-artifact@v3
+        id: upload_artifact
+        if: steps.get_desc.outcome == 'success'
+        with:
+          name: outputs
+          path: outputs/*.txt
+          retention-days: 1
+      - name: Remove files
+        id: remove_files
+        if: steps.upload_artifact.outcome == 'success'
+        run: |
+          rm -rf ./outputs/
+      - name: Create Pull Request
+        id: cpr_reusable
+        if: steps.remove_files.outcome != 'failed'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          title: "docs(readme): update ${{steps.name_action.outputs.filename}}.md on ${{ github.ref_name }}"
+          commit-message: "docs(readme): updated ${{steps.name_action.outputs.filename}}.md inputs table"
+          body: "Updated README.md inputs/outputs tables, according to ${{steps.name_action.outputs.filename}}.yml file"
+          branch: ${{ github.event.pull_request.head.ref }}-doc-${{ matrix.target }}
+          delete-branch: true
+          labels: bot,documentation
+          token: ${{ steps.create_token.outputs.token }}
+      - name: Pull Request Automerge
+        id: automerge
+        if: steps.cpr_reusable.outputs.pull-request-operation == 'created'
+        run: |
+          gh pr merge --squash --auto ${{ steps.cpr_reusable.outputs.pull-request-number }}
+        env:
+          GH_TOKEN: ${{ steps.create_token.outputs.token }}
+
+
+
+
+  set_desc:
+    needs: [ generate_doc ]
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ job.status }}
+    steps:
+      - id: create_token
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.APP_PEM }}
+          permissions: >-
+            {
+              "contents": "write",
+              "metadata": "read",
+              "pull_requests": "write",
+              "workflows": "write"
+            }
+      - name: Checkout Repository
+        id: checkout_branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Load artifact
+        if: ${{ needs.generate_doc.outputs.main_update != '' }}
+        id: load_artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: outputs
+          path: outputs
+      - name: Append Readme
+        if: steps.load_artifact.outcome == 'success'
+        id: append_readme
+        run: |
+          echo "Update state: ${{needs.generate_doc.outputs.main_update}}"
+          README="./README.md"
+          OUTPUTS_DIR="./outputs"
+          for txt_file in "$OUTPUTS_DIR"/*.txt; do
+            file_name=$(basename -- "$txt_file" .txt)
+            location=$(find . -type f -name "$file_name".yml 2>/dev/null | head -n 1 | sed 's/^\.\///')
+            if [ -z "$location" ]; then
+              echo "Warning: $file_name.yml not found!"
+            else
+              description=$(cat "$txt_file")
+
+              #
+              #   !!!ATTENTION!!!
+              #   CHANGER L'URL VERS LA BONNE VERSION
+              #
+              echo "| $file_name | $description | [$file_name](https://github.com/energypool/gha_shared/blob/main/$location)  |" >> "$README"
+            fi
+          done
+      - name: Remove files
+        id: remove_files
+        if: steps.append_readme.outcome == 'success'
+        run: |
+          rm -rf ./outputs/
+          ls -la
+      - name: Create Pull Request
+        id: cpr_main
+        if: steps.append_readme.outcome == 'success'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          title: "docs(readme): update README.md on ${{ github.ref_name }}"
+          commit-message: "docs(readme): updated README.md Actions list table"
+          body: "Updated README.md Action list tables, with the new actions files"
+          branch: ${{ github.event.pull_request.head.ref }}-doc-main
+          delete-branch: true
+          labels: bot,documentation
+          token: ${{ steps.create_token.outputs.token }}
+      - uses: geekyeggo/delete-artifact@v2
+        with:
+          name: outputs
+      - name: Pull Request Automerge
+        id: automerge
+        if: steps.cpr_main.outputs.pull-request-operation == 'created'
+        run: |
+          gh pr merge --squash --auto ${{ steps.cpr_main.outputs.pull-request-number }}
+        env:
+          GH_TOKEN: ${{ steps.create_token.outputs.token }}
+
