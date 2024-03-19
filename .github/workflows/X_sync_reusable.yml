@@ -14,7 +14,7 @@ on:
       - '!**/*.md'
 jobs:
   sync_files:
-    if: github.event_name == 'pull_request' && !contains('TestSyncGHA,TestSyncGHA[bot],testsyncgha[bot],testsyncgha', github.actor)
+    if: github.event_name == 'pull_request' && github.actor != 'testsyncgha'
     runs-on: ubuntu-latest
     outputs:
       status: ${{ job.status }}
