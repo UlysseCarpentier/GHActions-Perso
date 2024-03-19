@@ -1,0 +1,57 @@
+name: CD Deploy
+#name: CD Deploy
+#description: |+
+#  Update config file in k8s-XXX repository to be able to deploy the app by k8s (in XXX = uat, prep ...).
+#author: Hasna GOURAM <hasna.gouram@ext-energy-pool.eu>
+#
+on:
+  workflow_call:
+    secrets:
+      k8s_deploy_key:
+        description: "SSH key to be ale to checkout k8s-XXX repository (ex: XXX -> uat, prep ..."
+        required: true
+    inputs:
+      app_name:
+        description: "The name of the app to deploy"
+        required: true
+        type: string
+      app_config_path:
+        description: 'Path to the config file of k8s in the app'
+        required: true
+        type: string
+      image_tag:
+        description: "Tag to deploy"
+        required: true
+        type: string
+      repository:
+        description: "Name of the repository where to update the config file for k8s (ex: uat, prep ..."
+        required: true
+        type: string
+jobs:
+  update_config:
+    name: Update Config
+    runs-on: [gha-private-runners]
+    steps:
+      - run: git config --global user.email "devops@energy-pool.eu" && git config --global user.name "gha-runner"
+      - run: sudo apt-get update && sudo apt-get install openssh-client wget -y
+      - name: Checkout caller repo
+        uses: actions/checkout@v4
+        with:
+          path: caller
+          sparse-checkout: ${{ inputs.app_config_path }}
+      - name: Checkout ${{ inputs.repository }}
+        uses: actions/checkout@v4
+        with:
+          repository:  energypool/${{ inputs.repository }}
+          ref: main
+          ssh-key: ${{ secrets.k8s_deploy_key }}
+          path: ${{ inputs.repository }}
+      - name: Write config
+        run: |
+          mkdir -p "${{ inputs.repository }}/${{ inputs.app_name }}"
+          cp "caller/${{ inputs.app_config_path }}" "${{ inputs.repository }}/${{ inputs.app_name }}/config.yaml"
+          cd ${{ inputs.repository }}/
+          sed -i "s|{{IMAGE_TAG}}|${{ inputs.image_tag }}|g" "${{ inputs.app_name }}/config.yaml"
+          git add .
+          git commit -m "update(${{ inputs.app_name }}): config"
+          git push
