@@ -13,8 +13,8 @@ on:
       - '!**/*.md'
 jobs:
   sync_files:
-    if: github.event_name == 'pull_request' && github.actor != 'testsyncgha[bot]'!!!!
-    runs-on: !!!!
+    if: github.event_name == 'pull_request' && github.actor != 'testsyncgha[bot]'
+    runs-on: ubuntu-latest
     steps:
       - id: create_token
         uses: tibdex/github-app-token@v2
