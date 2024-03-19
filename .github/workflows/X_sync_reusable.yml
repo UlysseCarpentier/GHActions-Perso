@@ -8,8 +8,8 @@ name: Sync Reusable Workflows
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    branches:
-      - '!**-doc'
+    branches-ignore:
+      - '**-doc'
     paths:
       - '**/R_*.yml'
       - '!.github/**'
