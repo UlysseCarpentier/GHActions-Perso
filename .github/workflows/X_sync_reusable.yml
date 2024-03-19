@@ -8,14 +8,13 @@ name: Sync Reusable Workflows
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    branches-ignore:
-      - '**-doc'
     paths:
       - '**/R_*.yml'
       - '!.github/**'
       - '!**/*.md'
 jobs:
   sync_files:
+    if: github.event_name == 'pull_request' && !contains('TestSyncGHA,TestSyncGHA[bot],testsyncgha[bot],testsyncgha', github.actor)
     runs-on: ubuntu-latest
     outputs:
       status: ${{ job.status }}
