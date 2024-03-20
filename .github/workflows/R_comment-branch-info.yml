@@ -1,0 +1,46 @@
+name: Get comment branch info
+#name: Get comment branch info
+#
+#description: |+
+#  Get info (head ref and head sha) of the commented branch
+#  Should be triggered on a pull request event (eg: issue_comment)
+#  azeaz
+#author: EnergyPool devops@energy-pool.eu
+#
+on:
+  workflow_call:
+    outputs:
+      head_sha:
+        description: 'The head sha of the commented branch'
+        value: ${{ jobs.branch_info.outputs.head_sha }}
+      head_ref:
+        description: 'The head ref of the commented branch'
+        value: ${{ jobs.branch_info.outputs.head_ref }}
+
+jobs:
+  branch_info:
+    name: Get branch info
+    runs-on: gha-private-runners
+    if: github.event.issue.pull_request
+    steps:
+      - name: Get PR SHA
+        id: sha
+        uses: actions/github-script@v7.0.1
+        with:
+          result-encoding: string
+          script: |
+            const { owner, repo, number } = context.issue;
+            const pr = await github.rest.pulls.get({ owner, repo, pull_number: number });
+            return pr.data.head.sha
+      - name: Get PR REF
+        id: ref
+        uses: actions/github-script@v7.0.1
+        with:
+          result-encoding: string
+          script: |
+            const { owner, repo, number } = context.issue;
+            const pr = await github.rest.pulls.get({ owner, repo, pull_number: number });
+            return pr.data.head.ref
+    outputs:
+      head_sha: ${{ steps.sha.outputs.result }}
+      head_ref: ${{ steps.ref.outputs.result }}

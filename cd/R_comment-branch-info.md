@@ -1,14 +1,12 @@
 # Your Action title here
 
-reterter
-
 ## Others infos
 
 <!-- start branding -->
 <!-- end branding -->
 <!-- start title -->
 
-# GitHub Action: CD Clean Previews
+# GitHub Action: Get comment branch info
 
 <!-- end title -->
 <!-- start badges -->
@@ -16,9 +14,10 @@ reterter
 
 <!-- start description -->
 
-Clean previews.
+Get info (head ref and head sha) of the commented branch
 
-Only triggered by issue_comment / pull request events.
+Should be triggered on a pull request event (eg: issue_comment)
+azeaz
 
 <!-- end description -->
 <!-- start contents -->
