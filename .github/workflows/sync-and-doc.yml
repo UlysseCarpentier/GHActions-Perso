@@ -13,7 +13,6 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 jobs:
   sync_files:
     if: github.event_name == 'push' && github.actor != 'testsyncgha[bot]'
