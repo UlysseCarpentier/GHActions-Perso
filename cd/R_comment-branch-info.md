@@ -17,7 +17,7 @@
 Get info (head ref and head sha) of the commented branch
 
 Should be triggered on a pull request event (eg: issue_comment)
-azeazeaze
+azeaz
 
 <!-- end description -->
 <!-- start contents -->
