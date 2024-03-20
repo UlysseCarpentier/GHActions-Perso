@@ -17,7 +17,7 @@
 Get info (head ref and head sha) of the commented branch
 
 Should be triggered on a pull request event (eg: issue_comment)
-Also I'm smart af fr fr
+Also I'm smart af fr fr bro
 
 <!-- end description -->
 <!-- start contents -->
