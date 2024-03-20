@@ -1,0 +1,118 @@
+name: CD Update Previews
+description: |+
+  Update previews config file for a given app to deploy it by k8s.
+  Should be triggered on pull request comment
+author: EnergyPool devops@energy-pool.eu
+
+
+on:
+  workflow_call:
+    secrets:
+      k8s_previews_deploy_key:
+        description: "SSH key to be ale to checkout k8s-preview repository"
+        required: true
+    inputs:
+      app_name:
+        required: true
+        type: string
+        description: "The name of the app"
+      app_config_path:
+        required: true
+        type: string
+        description: 'Path to the config file of k8s in app'
+      template:
+        required: true
+        type: string
+        description: "List of key value pairs to replace in the config, one per line like 'PR_NUMBER=xxx\nIMAGE_TAG=xxx'"
+      service_http_path:
+        description: "Path to the http service, used to generate the URL"
+        required: false
+        type: string
+        default: ""
+      service_management_path:
+        description: "Path to the management (actuator) service, used to generate the URL"
+        required: false
+        type: string
+        default: ""
+jobs:
+  branch_info:
+    name: Get branch info
+    uses: energypool/gha_shared/.github/workflows/R_comment-branch-info.yml@main
+  update_config:
+    if: github.event.issue.pull_request
+    name: Update Config
+    runs-on: [gha-private-runners]
+    needs: branch_info
+    steps:
+    - name: Update comment
+      uses: peter-evans/create-or-update-comment@v4
+      with:
+        comment-id: ${{ github.event.comment.id }}
+        reactions: rocket
+    - name: Update check status
+      uses: myrotvorets/set-commit-status-action@master
+      with:
+        sha: ${{ needs.branch_info.outputs.head_sha }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+    - run: git config --global user.email "devops@energy-pool.eu" && git config --global user.name "gha-runner"
+    - run: sudo apt-get update && sudo apt-get install openssh-client wget -y
+    - name: Checkout caller repo
+      uses: actions/checkout@v4
+      with:
+        path: caller
+        sparse-checkout: ${{ inputs.app_config_path }}
+    - name: Checkout k8s-previews
+      uses: actions/checkout@v4
+      with:
+        repository: energypool/k8s-previews
+        ref: main
+        ssh-key: ${{ secrets.k8s_previews_deploy_key }}
+        path: k8s-previews
+    - name: Write config
+      run: |
+        set -x
+        mkdir -p "k8s-previews/${{ inputs.app_name }}"
+        cp "caller/${{ inputs.app_config_path }}" "k8s-previews/${{ inputs.app_name }}/${{ github.event.issue.number }}.yaml"
+        cd k8s-previews/
+
+        trimmed_tpl=$(echo "${{ inputs.template }}" | xargs)
+        # loop over trimmed_tpl as list separated by space
+        for tpl in $trimmed_tpl; do
+          key=$(echo $tpl | cut -d '=' -f 1)
+          value=$(echo $tpl | cut -d '=' -f 2)
+          sed -i "s|{{${key}}}|${value}|g" "${{ inputs.app_name }}/${{ github.event.issue.number }}.yaml"
+        done
+
+        cat "${{ inputs.app_name }}/${{ github.event.issue.number }}.yaml"
+
+        git add .
+        git commit -m "update(${{ inputs.app_name }}): config for ${{ github.event.issue.number }}"
+        git push
+    - name: Update comment with URL in success case
+      uses: peter-evans/create-or-update-comment@v4
+      if: ${{ always() && job.status == 'success' }}
+      with:
+        comment-id: ${{ github.event.comment.id }}
+        reactions: hooray
+        reactions-edit-mode: replace
+        body: |
+          Preview will be available shortly at:
+
+          Service | URL
+          --- | ---
+          http | https://${{ inputs.app_name }}-${{ github.event.issue.number }}.dev.energy-pool.eu/${{ inputs.service_http_path }}
+          management | https://${{ inputs.app_name }}-${{ github.event.issue.number }}-management.dev.energy-pool.eu/${{ inputs.service_management_path }}
+    - name: Update comment in failure case
+      if: ${{ always() && job.status == 'failure' }}
+      uses: peter-evans/create-or-update-comment@v4
+      with:
+        comment-id: ${{ github.event.comment.id }}
+        reactions: confused
+        reactions-edit-mode: replace
+    - if: always()
+      name: Update check status
+      uses: myrotvorets/set-commit-status-action@master
+      with:
+        sha: ${{ needs.branch_info.outputs.head_sha }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+        status: ${{ job.status }}
