@@ -71,7 +71,7 @@ jobs:
           title: "Reusable Workflows: Commenting lines"
           commit-message: "Reusable Workflows: Commenting lines"
           body: "Updated workflows files with commented lines"
-          branch: ${{ steps.extract_branch.outputs.branch }}-doc
+          branch: ${{ steps.extract_branch.outputs.branch }}-doc-${{ github.sha }}
           delete-branch: true
           token: ${{ steps.create_token.outputs.token }}
       - name: Pull Request Automerge
@@ -217,7 +217,7 @@ jobs:
           title: "docs(readme): update ${{steps.name_action.outputs.filename}}.md on ${{ github.ref_name }}"
           commit-message: "docs(readme): updated ${{steps.name_action.outputs.filename}}.md inputs table"
           body: "Updated README.md inputs/outputs tables, according to ${{steps.name_action.outputs.filename}}.yml file"
-          branch: ${{ steps.extract_branch.outputs.branch }}-doc-${{ matrix.target }}
+          branch: ${{ steps.extract_branch.outputs.branch }}-doc-${{ matrix.target }}-${{ github.sha }}
           delete-branch: true
           labels: bot,documentation
           token: ${{ steps.create_token.outputs.token }}
@@ -300,7 +300,7 @@ jobs:
           title: "docs(readme): update README.md on ${{ github.ref_name }}"
           commit-message: "docs(readme): updated README.md Actions list table"
           body: "Updated README.md Action list tables, with the new actions files"
-          branch: ${{ steps.extract_branch.outputs.branch }}-doc-main
+          branch: ${{ steps.extract_branch.outputs.branch }}-doc-main-${{ github.sha }}
           delete-branch: true
           labels: bot,documentation
           token: ${{ steps.create_token.outputs.token }}
