@@ -1,9 +1,4 @@
-name: Sync Reusable Workflows
-# Git App Rights (Repo):
-# Contents write
-# Pull requests write
-# Workflows write
-
+name: Sync&Doc Reusable Workflows
 on:
   push:
     branches:
@@ -14,7 +9,12 @@ on:
       - '!.github/**'
       - '!**/**.md'
 
-        ##Test modif de .md
+      ## runs on
+      ## concurrency
+      ## Noms des PRS
+      ##
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
 jobs:
   sync_files:
     if: github.event_name == 'push' && github.actor != 'testsyncgha[bot]'
@@ -39,11 +39,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.extract_branch.outputs.branch }}
-#      - name: add label
-#        if: steps.checkout_branch.outcome == 'success'
-#        uses: actions-ecosystem/action-add-labels@v1
-#        with:
-#          labels: ci-lock
+
       - name: Comment lines
         if: steps.checkout_branch.outcome == 'success'
         id: comment_lines
@@ -81,13 +77,7 @@ jobs:
           gh pr merge --squash --auto ${{ steps.cpr.outputs.pull-request-number }}
         env:
           GH_TOKEN: ${{ steps.create_token.outputs.token }}
-  #      - name: Approve pull request
-  #        if: steps.automerge.outcome == 'success'
-  #        uses: andrewmusgrave/automatic-pull-request-review@0.0.5
-  #        with:
-  #          repo-token: ${{ secrets.GITHUB_TOKEN }}
-  #          event: COMMENT
-  #          body: 'Synced reusable workflows files ${{ steps.cpr.outputs.pull-request-url }}'
+
 
   find_reusable_files:
     needs: sync_files
@@ -125,7 +115,7 @@ jobs:
     outputs:
       actions: ${{steps.reusable_files.outputs.matrix}}
 
-  # Rest of the file remains the same
+
   generate_doc:
     needs: find_reusable_files
     runs-on: ubuntu-latest
@@ -278,11 +268,6 @@ jobs:
               echo "Warning: $file_name.yml not found!"
             else
               description=$(cat "$txt_file")
-
-              #
-              #   !!!ATTENTION!!!
-              #   CHANGER L'URL VERS LA BONNE VERSION
-              #
               echo "| $file_name | $description | [$file_name](https://github.com/energypool/gha_shared/blob/main/$location)  |" >> "$README"
             fi
           done
@@ -314,8 +299,4 @@ jobs:
           gh pr merge --squash --auto ${{ steps.cpr_main.outputs.pull-request-number }}
         env:
           GH_TOKEN: ${{ steps.create_token.outputs.token }}
-#      - uses: actions-ecosystem/action-remove-labels@v1
-#        if: steps.automerge.outcome == 'success'
-#        with:
-#          labels: ci-lock
 

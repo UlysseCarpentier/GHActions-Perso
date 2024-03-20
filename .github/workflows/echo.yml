@@ -1,0 +1,13 @@
+name: Echo Workflow and Ref
+on:
+  workflow_dispatch:
+
+jobs:
+  echo-values:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo values
+        run: |
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Group: ${{ github.workflow }}-${{ github.ref }}"
