@@ -1,0 +1,103 @@
+name: LingoHub Auto Merge
+on:
+  pull_request:
+    branches:
+      - 'lingohup/**'
+    types:
+      - opened
+
+
+jobs:
+  changed_files:
+    runs-on: [gha-private-runners]
+    name: Test changed-files
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v41
+      - name: List all changed files
+        id: list_files
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+          ja=false
+          nl=false
+          echo "${{ steps.changed-files.outputs.all_changed_files }}"
+          IFS=' ' read -r -a files <<< "${{ steps.changed-files.outputs.all_changed_files }}"
+          for file in "${files[@]}"; do
+            if [[ "$file" == *"-ja"* ]]; then
+              echo "$file contains -ja"
+              ja=true
+            fi
+            if [[ "$file" == *"-nl"* ]]; then
+              echo "$file contains -nl"
+              nl=true
+            fi
+          done
+          echo 'ja='$ja >> $GITHUB_OUTPUT
+          echo 'nl='$nl >> $GITHUB_OUTPUT
+    outputs:
+      ja: ${{ steps.list_files.outputs.ja}}
+      nl: ${{ steps.list_files.outputs.nl}}
+      
+  notify_ja:
+    needs: changed_files
+    if:  ${{needs.changed_files.outputs.ja == 'true'}}
+    uses: energypool/gha_shared/.github/workflows/R_slack-notification.yml@slack/v1.0.0
+    with:
+      status: "success"
+      notification_title: "Japan LingoHub PR Merged"
+      #Tony Champin's slack id
+      mention_users: "UUCM7C615"
+      footer: "https://github.com/energypool/everest/pull/${{ github.event.number }}"
+    secrets:
+      SLACK_WEBHOOK_URL: "dfg"
+  notify_nl:
+    needs: changed_files
+    if: ${{needs.changed_files.outputs.nl == 'true'}}
+    uses: energypool/gha_shared/.github/workflows/R_slack-notification.yml@slack/v1.0.0
+    with:
+      status: "success"
+      notification_title: "Netherlands LingoHub PR Merged"
+      #Olivier Bocquenet's slack id
+      mention_users: "UN5E8GG80"
+      footer: "https://github.com/energypool/everest/pull/${{ github.event.number }}"
+    secrets:
+      SLACK_WEBHOOK_URL: "dfg"
+
+  merge:
+    needs: [notify_ja,notify_nl]
+    if: always()
+    runs-on: [gha-private-runners]
+    name: merge
+    steps:
+      - name: Checkout Repository
+        id: checkout_branch
+        uses: actions/checkout@v4
+      - name: auto-merge
+        run: |
+          type -p curl >/dev/null || (sudo apt update && sudo apt install curl -y)
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+          && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+          && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+          && sudo apt update \
+          && sudo apt install gh -y
+          
+          gh pr merge --squash --auto ${{ github.event.number }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Pull Request Automerge
+        id: automerge
+        if: steps.checkout_branch.outcome == 'success'
+        run: |
+          gh pr merge --squash --auto ${{ github.event.number }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Approve pull request
+        uses: andrewmusgrave/automatic-pull-request-review@0.0.5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
