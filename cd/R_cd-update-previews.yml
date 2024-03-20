@@ -4,6 +4,7 @@ description: |+
   Should be triggered on pull request comment
 author: EnergyPool devops@energy-pool.eu
 
+
 on:
   workflow_call:
     secrets:
