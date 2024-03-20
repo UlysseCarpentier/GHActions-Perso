@@ -10,11 +10,10 @@ on:
       - '!**/**.md'
 
       ## runs on
-      ## concurrency
-      ## Noms des PRS
-      ##
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   sync_files:
     if: github.event_name == 'push' && github.actor != 'testsyncgha[bot]'
@@ -64,9 +63,9 @@ jobs:
         if: steps.comment_lines.outcome == 'success'
         uses: peter-evans/create-pull-request@v6
         with:
-          title: "Reusable Workflows: Commenting lines"
-          commit-message: "Reusable Workflows: Commenting lines"
-          body: "Updated workflows files with commented lines"
+          title: "Sync Reusable Workflows"
+          commit-message: "Sync Reusable Workflows: Commenting lines and copy to .github/workflows"
+          body: "Updated workflows files with commented lines and copy to .github/workflows"
           branch: ${{ steps.extract_branch.outputs.branch }}-doc-${{ github.sha }}
           delete-branch: true
           token: ${{ steps.create_token.outputs.token }}
@@ -204,8 +203,8 @@ jobs:
         if: steps.remove_files.outcome != 'failed'
         uses: peter-evans/create-pull-request@v6
         with:
-          title: "docs(readme): update ${{steps.name_action.outputs.filename}}.md on ${{ github.ref_name }}"
-          commit-message: "docs(readme): updated ${{steps.name_action.outputs.filename}}.md inputs table"
+          title: "docs(readme): ${{steps.name_action.outputs.filename}}.md"
+          commit-message: "docs(readme): updated ${{steps.name_action.outputs.filename}}.md inputs/outputs tables"
           body: "Updated README.md inputs/outputs tables, according to ${{steps.name_action.outputs.filename}}.yml file"
           branch: ${{ steps.extract_branch.outputs.branch }}-doc-${{ matrix.target }}-${{ github.sha }}
           delete-branch: true
@@ -282,7 +281,7 @@ jobs:
         if: steps.append_readme.outcome == 'success'
         uses: peter-evans/create-pull-request@v5
         with:
-          title: "docs(readme): update README.md on ${{ github.ref_name }}"
+          title: "docs(readme): update README.md"
           commit-message: "docs(readme): updated README.md Actions list table"
           body: "Updated README.md Action list tables, with the new actions files"
           branch: ${{ steps.extract_branch.outputs.branch }}-doc-main-${{ github.sha }}
