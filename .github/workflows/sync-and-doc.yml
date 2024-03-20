@@ -12,7 +12,7 @@ on:
     paths:
       - '**/R_*.yml'
       - '!.github/**'
-      - '!**/*.md'
+      - '!**/**.md'
 jobs:
   sync_files:
     if: github.event_name == 'push' && github.actor != 'testsyncgha[bot]'
