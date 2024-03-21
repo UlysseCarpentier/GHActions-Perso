@@ -126,8 +126,8 @@ jobs:
                 pull_number: ${{ fromJson(steps.get_pr_data.outputs.result).number }},
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                event: 'COMMENT',
-                body: 'This file needs a review: ' + filePath
+                event: 'APPROVE',
+                body: 'LGTM'
               });
             }
 #      - uses: actions/github-script@v7
