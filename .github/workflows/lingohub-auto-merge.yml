@@ -1,12 +1,8 @@
 name: LingoHub Auto Merge
 on:
-  pull_request:
-    types:
-      - opened
+  push:
     branches:
       - 'lingohup/**'
-    paths:
-      - '**.json'
 
 
 jobs:
