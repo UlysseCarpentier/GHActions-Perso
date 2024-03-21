@@ -109,6 +109,7 @@ jobs:
             return filePaths;
         id: get_file_paths
       - uses: actions/github-script@v7
+        id: approve_pr
         with:
           script: |
             const filePaths = ${{ steps.get_file_paths.outputs.result }};
@@ -119,6 +120,23 @@ jobs:
                 event: 'APPROVE',
                 body: 'LGTM'
               });
+      - name: Delete branch
+        if: steps.approve_pr.outcome == 'success'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ fromJson(steps.get_pr_data.outputs.result).number }};
+            const prData = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            const branchName = prData.data.head.ref;
+            await github.rest.git.deleteRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'heads/' + branchName
+            });
 #            for (const filePath of filePaths) {
 #              await github.rest.pulls.createReview({
 #                pull_number: ${{ fromJson(steps.get_pr_data.outputs.result).number }},
