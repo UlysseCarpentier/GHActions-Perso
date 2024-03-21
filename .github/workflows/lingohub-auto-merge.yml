@@ -5,6 +5,8 @@ on:
       - opened
     branches:
       - 'lingohup/**'
+    paths:
+      - '**.json'
 
 
 jobs:
@@ -69,7 +71,7 @@ jobs:
   merge:
     needs: changed_files
     if: always()
-    runs-on: [gha-private-runners]
+    runs-on: ubuntu-latest
     name: merge
     steps:
       - name: Checkout Repository
