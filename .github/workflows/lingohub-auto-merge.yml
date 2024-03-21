@@ -35,8 +35,8 @@ jobs:
           done
           echo 'ja='$ja >> $GITHUB_OUTPUT
           echo 'nl='$nl >> $GITHUB_OUTPUT
-      - name: Sleep for 30 seconds
-        run: sleep 30s
+      - name: Wait for PR to be created
+        run: sleep 15s
         shell: bash
     outputs:
       ja: ${{ steps.list_files.outputs.ja}}
@@ -76,18 +76,6 @@ jobs:
       - name: Checkout Repository
         id: checkout_branch
         uses: actions/checkout@v4
-#      - name: auto-merge
-#        run: |
-#          type -p curl >/dev/null || (sudo apt update && sudo apt install curl -y)
-#          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
-#          && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
-#          && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-#          && sudo apt update \
-#          && sudo apt install gh -y
-#
-#          gh pr merge --squash --auto ${{ github.event.number }}
-#        env:
-#          GH_TOKEN: ${{ github.token }}
       - uses: actions/github-script@v7
         id: get_pr_data
         with:
@@ -124,26 +112,22 @@ jobs:
         with:
           script: |
             const filePaths = ${{ steps.get_file_paths.outputs.result }};
-            for (const filePath of filePaths) {
-              await github.rest.pulls.createReview({
+            await github.rest.pulls.createReview({
                 pull_number: ${{ fromJson(steps.get_pr_data.outputs.result).number }},
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 event: 'APPROVE',
                 body: 'LGTM'
               });
-            }
-#      - uses: actions/github-script@v7
-#        with:
-#          script: |
-#            github.rest.pulls.createReview({
-#              pull_number: ${{ fromJson(steps.get_pr_data.outputs.result).number }},
-#              owner: context.repo.owner,
-#              repo: context.repo.repo,
-#              event: 'APPROVE'
-#              comments[].path: '*',
-#              comments[].body: '👋 Thanks for reporting!'
-#            })
+#            for (const filePath of filePaths) {
+#              await github.rest.pulls.createReview({
+#                pull_number: ${{ fromJson(steps.get_pr_data.outputs.result).number }},
+#                owner: context.repo.owner,
+#                repo: context.repo.repo,
+#                event: 'APPROVE',
+#                body: 'LGTM'
+#              });
+#            }
 
 
 
