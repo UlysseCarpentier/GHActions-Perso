@@ -85,15 +85,62 @@ jobs:
 #          gh pr merge --squash --auto ${{ github.event.number }}
 #        env:
 #          GH_TOKEN: ${{ github.token }}
+      - uses: actions/github-script@v7
+        id: get_pr_data
+        with:
+          script: |
+            return (
+              await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                commit_sha: context.sha,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+              })
+            ).data[0];
       - name: Pull Request Automerge
         id: automerge
         if: steps.checkout_branch.outcome == 'success'
         run: |
-          gh pr merge --squash --auto ${{ github.event.number }}
+          gh pr merge --squash --auto ${{ fromJson(steps.get_pr_data.outputs.result).number }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Approve pull request
-        uses: andrewmusgrave/automatic-pull-request-review@0.0.5
+      - name: Get file paths
+        uses: actions/github-script@v7
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const prNumber = ${{ fromJson(steps.get_pr_data.outputs.result).number }};
+            const files = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            const filePaths = files.data.map(file => file.filename);
+            console.log(filePaths);
+            return filePaths;
+        id: get_file_paths
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const filePaths = ${{ steps.get_file_paths.outputs.result }};
+            for (const filePath of filePaths) {
+              await github.rest.pulls.createReview({
+                pull_number: ${{ fromJson(steps.get_pr_data.outputs.result).number }},
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                event: 'COMMENT',
+                body: 'This file needs a review: ' + filePath
+              });
+            }
+#      - uses: actions/github-script@v7
+#        with:
+#          script: |
+#            github.rest.pulls.createReview({
+#              pull_number: ${{ fromJson(steps.get_pr_data.outputs.result).number }},
+#              owner: context.repo.owner,
+#              repo: context.repo.repo,
+#              event: 'APPROVE'
+#              comments[].path: '*',
+#              comments[].body: '👋 Thanks for reporting!'
+#            })
+
+
 
