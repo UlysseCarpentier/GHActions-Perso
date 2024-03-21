@@ -35,6 +35,9 @@ jobs:
           done
           echo 'ja='$ja >> $GITHUB_OUTPUT
           echo 'nl='$nl >> $GITHUB_OUTPUT
+      - name: Sleep for 30 seconds
+        run: sleep 30s
+        shell: bash
     outputs:
       ja: ${{ steps.list_files.outputs.ja}}
       nl: ${{ steps.list_files.outputs.nl}}
